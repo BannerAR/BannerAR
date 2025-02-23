@@ -46,12 +46,23 @@
     <label>Height (feet):</label>
     <input type="number" id="height" step="0.1" placeholder="Enter height"><br><br>
 
-    <button onclick="startAR()">Show in AR</button>
+    <button onclick="requestCameraPermission()">Show in AR</button>
 
     <div id="arContainer"></div> 
     <button id="closeAR" onclick="closeAR()">Close AR</button>
 
     <script>
+        function requestCameraPermission() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(() => {
+                    startAR();
+                })
+                .catch(err => {
+                    alert("Camera permission denied. Please allow camera access to use AR.");
+                    console.error("Camera access error:", err);
+                });
+        }
+
         function startAR() {
             let fileInput = document.getElementById("imageUpload");
             let widthFeet = parseFloat(document.getElementById("width").value);
@@ -72,7 +83,8 @@
             let heightMeters = heightFeet * 1.65;
 
             document.getElementById("arContainer").innerHTML = `
-                <a-scene embedded arjs vr-mode-ui="enabled: false;" renderer="antialias: true;" 
+                <a-scene embedded arjs vr-mode-ui="enabled: false;" 
+                    renderer="antialias: true; logarithmicDepthBuffer: true;"
                     gesture-detector webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;">
                     <a-marker preset="hiro">
                         <a-image src="${imageUrl}" width="${widthMeters}" height="${heightMeters}" position="0 0 0" rotation="-90 0 0"></a-image>
@@ -84,7 +96,6 @@
             document.getElementById("arContainer").style.display = "block";
             document.getElementById("closeAR").style.display = "block";
 
-            // Ensure fullscreen for mobile
             let scene = document.querySelector("a-scene");
             if (scene.requestFullscreen) {
                 scene.requestFullscreen();
