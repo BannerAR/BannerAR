@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR.js Image Scaling Fix</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://rawgit.com/jeromeetienne/ar.js/1.7.2/aframe/build/aframe-ar.min.js"></script>
+</head>
+<body style="margin: 0; overflow: hidden;">
+    <a-scene embedded arjs>
+        <!-- Use 'hiro' or replace with a custom marker -->
+        <a-marker preset="hiro">     <!-- Adjust image size as per real-world scaling -->
+            <a-image 
+                src="image.png" 
+                width="4" 
+                height="6" 
+                position="0 0 0" 
+                rotation="-90 0 0">
+            </a-image>
+        </a-marker>
+
+        <!-- Custom FoV to match real-world camera view -->
+        <a-entity camera look-controls wasd-controls fov="45"></a-entity>
+    </a-scene>
+</body>
+</html>
