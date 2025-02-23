@@ -2,117 +2,96 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Image Viewer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AR Image Renderer with Hiro Marker</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://rawgit.com/jeromeetienne/ar.js/1.7.2/aframe/build/aframe-ar.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <style>
+        /* Mobile-friendly styles */
         body {
-            text-align: center;
+            margin: 0;
+            overflow: hidden;
             font-family: Arial, sans-serif;
         }
-        #arContainer {
-            display: none;
-            width: 100vw;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background: black;
-        }
-        #closeAR {
-            display: none;
+        .controls {
             position: absolute;
             top: 10px;
-            right: 10px;
-            padding: 10px 15px;
-            font-size: 16px;
-            background: red;
-            color: white;
-            border: none;
-            cursor: pointer;
-            z-index: 10;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .controls input {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 5px;
+            box-sizing: border-box;
         }
     </style>
 </head>
 <body>
+    <!-- AR Scene -->
+    <a-scene embedded arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false;">
+        <!-- Camera with adjusted clipping planes -->
+        <a-entity camera="near: 0.01; far: 1000;"></a-entity>
 
-    <h2>Upload Image & Set Dimensions</h2>
-    <input type="file" id="imageUpload" accept=".png, .jpg, .jpeg"><br><br>
+        <!-- Hiro Marker -->
+        <a-marker id="hiro-marker" type="pattern" preset="hiro">
+            <!-- Plane to display the user's image -->
+            <a-plane id="image-plane" position="0 0.5 0" rotation="-90 0 0" width="1" height="1" material="transparent: true;"></a-plane>
+        </a-marker>
+    </a-scene>
 
-    <label>Width (feet):</label>
-    <input type="number" id="width" step="0.1" placeholder="Enter width"><br><br>
-
-    <label>Height (feet):</label>
-    <input type="number" id="height" step="0.1" placeholder="Enter height"><br><br>
-
-    <button onclick="requestCameraPermission()">Show in AR</button>
-
-    <div id="arContainer"></div> 
-    <button id="closeAR" onclick="closeAR()">Close AR</button>
+    <!-- Controls for image upload and size input -->
+    <div class="controls">
+        <input type="file" id="image-input" accept="image/*">
+        <input type="number" id="width-input" placeholder="Enter width (e.g., 1.5)">
+        <input type="number" id="height-input" placeholder="Enter height (e.g., 1.0)">
+    </div>
 
     <script>
-        function requestCameraPermission() {
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(() => {
-                    startAR();
-                })
-                .catch(err => {
-                    alert("Camera permission denied. Please allow camera access to use AR.");
-                    console.error("Camera access error:", err);
-                });
-        }
+        // Wait for the DOM to load
+        document.addEventListener('DOMContentLoaded', function () {
+            const imageInput = document.getElementById('image-input');
+            const widthInput = document.getElementById('width-input');
+            const heightInput = document.getElementById('height-input');
+            const imagePlane = document.getElementById('image-plane');
 
-        function startAR() {
-            let fileInput = document.getElementById("imageUpload");
-            let widthFeet = parseFloat(document.getElementById("width").value);
-            let heightFeet = parseFloat(document.getElementById("height").value);
+            // Function to update the plane's size and texture
+            function updatePlane() {
+                const userWidth = parseFloat(widthInput.value) || 1;
+                const userHeight = parseFloat(heightInput.value) || 1;
 
-            if (!fileInput.files.length) {
-                alert("Please upload an image.");
-                return;
-            }
-            if (isNaN(widthFeet) || isNaN(heightFeet) || widthFeet <= 0 || heightFeet <= 0) {
-                alert("Please enter valid width and height in feet.");
-                return;
+                // Update the plane's size
+                imagePlane.setAttribute('width', userWidth);
+                imagePlane.setAttribute('height', userHeight);
             }
 
-            let file = fileInput.files[0];
-            let imageUrl = URL.createObjectURL(file);
-            let widthMeters = widthFeet * 1.65;  
-            let heightMeters = heightFeet * 1.65;
+            // Listen for file input changes
+            imageInput.addEventListener('change', function (event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        // Create an image element to get the dimensions
+                        const img = new Image();
+                        img.src = e.target.result;
+                        img.onload = function () {
+                            // Update the plane's texture
+                            imagePlane.setAttribute('material', 'src', img.src);
+                            updatePlane(); // Update size after image is loaded
+                        };
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
 
-            document.getElementById("arContainer").innerHTML = `
-                <a-scene embedded arjs vr-mode-ui="enabled: false;" 
-                    renderer="antialias: true; logarithmicDepthBuffer: true;"
-                    gesture-detector webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;">
-                    <a-marker preset="hiro">
-                        <a-image src="${imageUrl}" width="${widthMeters}" height="${heightMeters}" position="0 0 0" rotation="-90 0 0"></a-image>
-                    </a-marker>
-                    <a-entity camera></a-entity>
-                </a-scene>
-            `;
-
-            document.getElementById("arContainer").style.display = "block";
-            document.getElementById("closeAR").style.display = "block";
-
-            let scene = document.querySelector("a-scene");
-            if (scene.requestFullscreen) {
-                scene.requestFullscreen();
-            } else if (scene.mozRequestFullScreen) {
-                scene.mozRequestFullScreen();
-            } else if (scene.webkitRequestFullscreen) {
-                scene.webkitRequestFullscreen();
-            } else if (scene.msRequestFullscreen) {
-                scene.msRequestFullscreen();
-            }
-        }
-
-        function closeAR() {
-            document.getElementById("arContainer").style.display = "none";
-            document.getElementById("closeAR").style.display = "none";
-        }
+            // Listen for width and height input changes
+            widthInput.addEventListener('input', updatePlane);
+            heightInput.addEventListener('input', updatePlane);
+        });
     </script>
-
 </body>
 </html>
